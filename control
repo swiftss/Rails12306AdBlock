@@ -1,8 +1,8 @@
 Package: com.swiftss.rails12306adblock
 Name: 12306 Ad Block
-Version: 1.0.1
+Version: 1.0.2
 Architecture: iphoneos-arm
-Description: Removes launch, home-top, and order-bottom ads from Railway 12306 5.9.6.
+Description: Stage 1 diagnostic build for Railway 12306 launch ads.
 Maintainer: swiftss
 Author: swiftss
 Section: Tweaks

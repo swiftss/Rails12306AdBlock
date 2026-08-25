@@ -1,117 +1,79 @@
 #import <UIKit/UIKit.h>
-#import <WebKit/WebKit.h>
+#import <Foundation/Foundation.h>
 
-static NSString *const RABOrderCSS =
-    @"(function(){"
-     "var id='rails12306-adblock-style';"
-     "if(!document.getElementById(id)){"
-       "var s=document.createElement('style');s.id=id;"
-       "s.textContent='.order-recommend-advertisement-wrap{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}';"
-       "(document.head||document.documentElement).appendChild(s);"
-     "}"
-     "document.querySelectorAll('.order-recommend-advertisement-wrap').forEach(function(e){e.remove();});"
-     "if(!window.__rails12306AdObserver){"
-       "window.__rails12306AdObserver=new MutationObserver(function(){"
-         "document.querySelectorAll('.order-recommend-advertisement-wrap').forEach(function(e){e.remove();});"
-       "});"
-       "window.__rails12306AdObserver.observe(document.documentElement,{childList:true,subtree:true});"
-     "}"
-    "})();";
+static NSString *RABLogPath(void) {
+    return [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/Rails12306AdBlock.log"];
+}
 
-static void RABInjectOrderCSS(WKWebView *webView) {
-    if (!webView) return;
-    for (NSNumber *delay in @[@0.1, @0.6, @1.5]) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-            (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [webView evaluateJavaScript:RABOrderCSS completionHandler:nil];
-        });
+static void RABLog(NSString *format, ...) {
+    va_list arguments;
+    va_start(arguments, format);
+    NSString *message = [[NSString alloc] initWithFormat:format arguments:arguments];
+    va_end(arguments);
+    NSString *line = [NSString stringWithFormat:@"%@ %@\n", NSDate.date, message];
+    NSLog(@"[Rails12306AdBlock] %@", message);
+    NSData *data = [line dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *path = RABLogPath();
+    NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:path];
+    if (!handle) {
+        [data writeToFile:path atomically:YES];
+    } else {
+        [handle seekToEndOfFile];
+        [handle writeData:data];
+        [handle closeFile];
     }
 }
 
-static void RABHideView(UIView *view) {
-    view.hidden = YES;
-    view.alpha = 0.0;
-    view.userInteractionEnabled = NO;
-    CGRect frame = view.frame;
-    frame.size.height = 0.0;
-    view.frame = frame;
-}
-
-// The app's advertising coordinator. Disabling start prevents self-hosted,
-// BeiZi, and MeiShu launch-ad paths without touching normal app startup.
+// Stage 1: launch advertisement only. Keep AdvertisService's original startup
+// and data initialization intact; only report that no ad should be displayed.
 %hook AdvertisService
-- (void)start {}
-- (void)getAdInfo {}
-- (void)pageStartLoad {}
-- (void)pageBecomeActive {}
-- (BOOL)getAdShowFlag { return NO; }
-- (BOOL)checkHaveADDisplay { return NO; }
+- (void)start {
+    RABLog(@"AdvertisService start -> original");
+    %orig;
+}
+- (void)initialize:(id)value {
+    RABLog(@"AdvertisService initialize -> original");
+    %orig;
+}
+- (void)dataSuccess:(id)data {
+    RABLog(@"AdvertisService dataSuccess -> original");
+    %orig;
+}
+- (BOOL)getAdShowFlag {
+    RABLog(@"AdvertisService getAdShowFlag -> NO");
+    return NO;
+}
+- (BOOL)checkHaveADDisplay {
+    RABLog(@"AdvertisService checkHaveADDisplay -> NO");
+    return NO;
+}
 %end
 
-// Defensive hooks in case another component creates the splash manager.
+// Suppress only the final presentation of a launch ad. SDK/service setup is
+// allowed to complete, avoiding the nil state caused by the previous build.
 %hook BonSplashAD
-- (void)showBgView {}
-- (void)addAdView {}
-- (void)addLaunchView {}
-- (void)addNoCNLaunchView {}
-- (void)showBtnSkip {}
-- (void)backToFrontshowAd {}
-- (BOOL)isNeedAgain { return NO; }
-- (BOOL)isADShowing { return NO; }
-- (BOOL)isSplashShowing { return NO; }
+- (void)showBgView { RABLog(@"blocked BonSplashAD showBgView"); }
+- (void)addAdView { RABLog(@"blocked BonSplashAD addAdView"); }
+- (void)addLaunchView { RABLog(@"blocked BonSplashAD addLaunchView"); }
+- (void)addNoCNLaunchView { RABLog(@"blocked BonSplashAD addNoCNLaunchView"); }
+- (void)backToFrontshowAd { RABLog(@"blocked BonSplashAD backToFrontshowAd"); }
+- (BOOL)isNeedAgain {
+    RABLog(@"BonSplashAD isNeedAgain -> NO");
+    return NO;
+}
 %end
 
-// Native ad carousel at the top of the ticket-booking home page.
-%hook MTBookTicketHomeTopADView
-- (instancetype)initWithFrame:(CGRect)frame animationScrollDuration:(CGFloat)duration {
-    frame.size.height = 0.0;
-    id result = %orig(frame, duration);
-    RABHideView(result);
-    return result;
+%ctor {
+    @autoreleasepool {
+        RABLog(@"loaded stage=1 bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
+            NSProcessInfo.processInfo.processName, NSHomeDirectory());
+        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidFinishLaunchingNotification
+            object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+                RABLog(@"UIApplicationDidFinishLaunching");
+            }];
+        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification
+            object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+                RABLog(@"UIApplicationDidBecomeActive");
+            }];
+    }
 }
-- (void)didMoveToSuperview {
-    %orig;
-    RABHideView((UIView *)self);
-}
-- (CGSize)intrinsicContentSize { return CGSizeZero; }
-- (void)setFrame:(CGRect)frame {
-    frame.size.height = 0.0;
-    %orig(frame);
-}
-- (void)reloadAdsData {}
-- (void)loadMaterialsList:(id)list withArriveStationCode:(id)code voiceOverStatus:(BOOL)status {}
-%end
-
-%hook MTBookTicketHomeMgrView
-- (void)adInfo {}
-- (void)updateHomePageADWithData:(id)data {}
-- (void)reloadADSource {}
-%end
-
-%hook MTBookTicketViewController
-- (void)updateHomePageADData:(id)data {}
-%end
-
-// The order page is Nebula micro-app 60000003. Hide only its OrderAD node;
-// ticket details, payment, and the normal additional-services section remain.
-%hook WKWebView
-- (void)didMoveToWindow {
-    %orig;
-    RABInjectOrderCSS(self);
-}
-- (WKNavigation *)loadRequest:(NSURLRequest *)request {
-    WKNavigation *navigation = %orig;
-    RABInjectOrderCSS(self);
-    return navigation;
-}
-- (WKNavigation *)loadFileURL:(NSURL *)URL allowingReadAccessToURL:(NSURL *)readAccessURL {
-    WKNavigation *navigation = %orig;
-    RABInjectOrderCSS(self);
-    return navigation;
-}
-- (WKNavigation *)loadHTMLString:(NSString *)string baseURL:(NSURL *)baseURL {
-    WKNavigation *navigation = %orig;
-    RABInjectOrderCSS(self);
-    return navigation;
-}
-%end
