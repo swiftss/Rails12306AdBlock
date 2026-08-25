@@ -1,6 +1,6 @@
 # 12306 Ad Block
 
-## v1.1.6 scoped page rules
+## v1.1.7 scoped page rules
 
 This build does not replace 12306 private Objective-C methods. It injects
 precise rules into confirmed web advertisement containers. File and console

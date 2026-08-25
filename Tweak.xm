@@ -32,7 +32,6 @@ static BOOL RABHideLaunchContainer(UIView *view) {
 // visible and manual UIKit layout/interaction is otherwise untouched.
 %hook MTBookTicketHomeTopADView
 - (void)initAnimationScrollTimerWithDuration:(CGFloat)duration {
-    [self clearADShowTimers];
 }
 
 - (void)startScroll {
