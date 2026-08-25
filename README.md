@@ -1,11 +1,10 @@
 # 12306 Ad Block
 
-## v1.0.7 hook-free UI scanner
+## v1.0.8 hook-free home ad removal
 
-This build does not replace any Objective-C method. During the first seconds of
-launch it only scans the visible view hierarchy and records likely ad, splash,
-and skip-button views. It intentionally does not remove ads. The log is written
-inside the app data container at
+This build does not replace any Objective-C method. It hides the confirmed
+`MTBookTicketHomeTopADView` hierarchy and uses a faster early-launch scan to
+identify the splash container. The log is written inside the app data container at
 `Library/Caches/Rails12306AdBlock.log`.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:
