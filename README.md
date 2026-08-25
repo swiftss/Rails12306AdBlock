@@ -1,10 +1,11 @@
 # 12306 Ad Block
 
-## v1.0.5 single-hook diagnostic
+## v1.0.6 hook-free UI scanner
 
-This build hooks only `BonSplashAD -addNoCNLaunchView`, calls the complete
-original implementation, and records entry and return. It intentionally does
-not remove ads. The log is written inside the app data container at
+This build does not replace any Objective-C method. During the first seconds of
+launch it only scans the visible view hierarchy and records likely ad, splash,
+and skip-button views. It intentionally does not remove ads. The log is written
+inside the app data container at
 `Library/Caches/Rails12306AdBlock.log`.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:
