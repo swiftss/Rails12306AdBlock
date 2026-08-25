@@ -27,9 +27,7 @@ static void RABLog(NSString *format, ...) {
     }
 }
 
-static BOOL RABLoggedHomeAd = NO;
 static BOOL RABLoggedLaunchAd = NO;
-static BOOL RABNormalizedHomeOffset = NO;
 
 static BOOL RABHideLaunchContainer(UIView *view) {
     if (!view) return NO;
@@ -89,54 +87,10 @@ static void RABInstallWebRules(WKWebView *webView) {
     }];
 }
 
-static UITableView *RABAncestorTableView(UIView *view) {
-    UIView *ancestor = view.superview;
-    while (ancestor) {
-        if ([ancestor isKindOfClass:UITableView.class]) return (UITableView *)ancestor;
-        ancestor = ancestor.superview;
-    }
-    return nil;
-}
-
-static void RABProcessView(UIView *view, BOOL insideTopAd) {
+static void RABProcessView(UIView *view) {
     if (!view) return;
-    NSString *className = NSStringFromClass(view.class);
-    BOOL nowInsideTopAd = insideTopAd || [className isEqualToString:@"MTBookTicketHomeTopADView"];
-
-    // Collapse only the confirmed banner view itself. Never alter its plain UIView
-    // wrapper, UITableView, or constraints; doing so removed the ticket-search UI.
-    if ([className isEqualToString:@"MTBookTicketHomeTopADView"]) {
-        UITableView *tableView = RABAncestorTableView(view);
-        view.hidden = YES;
-        view.alpha = 0;
-        view.userInteractionEnabled = NO;
-        CGRect frame = view.frame;
-        frame.size.height = 0;
-        view.frame = frame;
-        if (!RABNormalizedHomeOffset && tableView) {
-            RABNormalizedHomeOffset = YES;
-            [tableView layoutIfNeeded];
-            CGFloat top = -tableView.adjustedContentInset.top;
-            CGPoint oldOffset = tableView.contentOffset;
-            if (oldOffset.y > top + 40.0) {
-                [tableView setContentOffset:CGPointMake(oldOffset.x, top) animated:NO];
-                RABLog(@"normalized home offset %.1f -> %.1f", oldOffset.y, top);
-            }
-        }
-    }
-
-    if (nowInsideTopAd && [className isEqualToString:@"MTBookTicketHomeADView"]) {
-        view.hidden = YES;
-        view.alpha = 0;
-        view.userInteractionEnabled = NO;
-        if (!RABLoggedHomeAd) {
-            RABLoggedHomeAd = YES;
-            RABLog(@"hidden home banner items only; layout preserved");
-        }
-    }
-
     if ([view isKindOfClass:WKWebView.class]) RABInstallWebRules((WKWebView *)view);
-    for (UIView *child in view.subviews) RABProcessView(child, nowInsideTopAd);
+    for (UIView *child in view.subviews) RABProcessView(child);
 }
 
 static void RABRunSafePass(void) {
@@ -145,7 +99,7 @@ static void RABRunSafePass(void) {
             if (![scene isKindOfClass:UIWindowScene.class]) continue;
             for (UIWindow *window in ((UIWindowScene *)scene).windows) {
                 RABHideLaunchContainer(window);
-                RABProcessView(window, NO);
+                RABProcessView(window);
             }
         }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)),
