@@ -28,6 +28,36 @@ static void RABLog(NSString *format, ...) {
 }
 
 static BOOL RABLoggedHomeAd = NO;
+static BOOL RABLoggedLaunchAd = NO;
+
+static BOOL RABHideLaunchContainer(UIView *view) {
+    if (!view) return NO;
+    BOOL found = NO;
+    if ([NSStringFromClass(view.class) isEqualToString:@"UIAdBgView"]) {
+        view.hidden = YES;
+        view.alpha = 0;
+        view.userInteractionEnabled = NO;
+        found = YES;
+        if (!RABLoggedLaunchAd) {
+            RABLoggedLaunchAd = YES;
+            RABLog(@"hidden launch container UIAdBgView frame=%@", NSStringFromCGRect(view.frame));
+        }
+    }
+    for (UIView *child in view.subviews) {
+        if (RABHideLaunchContainer(child)) found = YES;
+    }
+    return found;
+}
+
+// Keep the complete launch-ad lifecycle intact and hide only its final UIKit
+// container after it has been attached to a window. No 12306 private method is
+// replaced, avoiding the launch crashes seen with AdvertisService/BonSplashAD.
+%hook UIWindow
+- (void)addSubview:(UIView *)view {
+    %orig;
+    RABHideLaunchContainer(view);
+}
+%end
 
 static void RABInstallOrderRule(WKWebView *webView) {
     static NSString *script =
@@ -93,6 +123,7 @@ static void RABRunSafePass(void) {
         for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
             if (![scene isKindOfClass:UIWindowScene.class]) continue;
             for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                RABHideLaunchContainer(window);
                 RABProcessView(window, NO);
             }
         }
@@ -103,7 +134,7 @@ static void RABRunSafePass(void) {
 
 %ctor {
     @autoreleasepool {
-        RABLog(@"loaded stage=home-collapse-order-v2 bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
+        RABLog(@"loaded stage=window-launch-hide bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
             NSProcessInfo.processInfo.processName, NSHomeDirectory());
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)),
             dispatch_get_main_queue(), ^{ RABRunSafePass(); });

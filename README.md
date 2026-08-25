@@ -1,6 +1,6 @@
 # 12306 Ad Block
 
-## v1.1.2 home gap and OrderAD test
+## v1.1.3 window-level launch ad test
 
 This build does not replace Objective-C methods. It hides only banner item views
 inside `MTBookTicketHomeTopADView`, without changing the surrounding layout, and
@@ -12,6 +12,11 @@ The home banner itself is collapsed without touching its parent wrapper. The
 order rule also targets the statically confirmed `OrderAD` component located
 after `.added-services-contain`, covering runtime builds that no longer expose
 the older advertisement class name.
+
+Launch ads are handled at the UIKit window boundary. After `UIWindow` performs
+its original `addSubview:`, only a descendant whose exact runtime class is
+`UIAdBgView` is hidden. The tweak does not replace any `AdvertisService` or
+`BonSplashAD` implementation and does not skip their initialization lifecycle.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:
 
