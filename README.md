@@ -1,10 +1,10 @@
 # 12306 Ad Block
 
-## v1.0.8 hook-free home ad removal
+## v1.0.9 recovery baseline
 
-This build does not replace any Objective-C method. It hides the confirmed
-`MTBookTicketHomeTopADView` hierarchy and uses a faster early-launch scan to
-identify the splash container. The log is written inside the app data container at
+This build does not replace Objective-C methods and does not alter any view.
+It restores the complete home-page layout after the v1.0.8 diagnostic mistake.
+The log is written inside the app data container at
 `Library/Caches/Rails12306AdBlock.log`.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:
