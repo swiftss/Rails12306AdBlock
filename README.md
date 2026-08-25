@@ -1,10 +1,10 @@
 # 12306 Ad Block
 
-## v1.0.3 diagnostic baseline
+## v1.0.4 injection-only diagnostic baseline
 
-This build only observes the launch-ad call path and preserves every original
-return value and side effect. It intentionally does not remove ads. The log is
-written inside the app data container at
+This build has no app-class hooks and no notification observers. It only writes
+one line when the tweak is loaded, so it intentionally does not remove ads. The
+log is written inside the app data container at
 `Library/Caches/Rails12306AdBlock.log`.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:
