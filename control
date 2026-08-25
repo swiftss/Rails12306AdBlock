@@ -1,6 +1,6 @@
 Package: com.swiftss.rails12306adblock
 Name: 12306 Ad Block
-Version: 1.0.6
+Version: 1.0.7
 Architecture: iphoneos-arm
 Description: Hook-free launch view scanner diagnostic for Railway 12306.
 Maintainer: swiftss

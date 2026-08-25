@@ -1,6 +1,6 @@
 # 12306 Ad Block
 
-## v1.0.6 hook-free UI scanner
+## v1.0.7 hook-free UI scanner
 
 This build does not replace any Objective-C method. During the first seconds of
 launch it only scans the visible view hierarchy and records likely ad, splash,

@@ -69,7 +69,12 @@ static void RABScanView(UIView *view, NSUInteger depth) {
 
 static void RABRunScan(NSUInteger pass) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSArray<UIWindow *> *windows = UIApplication.sharedApplication.windows;
+        NSMutableArray<UIWindow *> *windows = [NSMutableArray array];
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if ([scene isKindOfClass:UIWindowScene.class]) {
+                [windows addObjectsFromArray:((UIWindowScene *)scene).windows];
+            }
+        }
         RABLog(@"ui-scan pass=%lu windows=%lu", (unsigned long)pass, (unsigned long)windows.count);
         for (UIWindow *window in windows) RABScanView(window, 0);
         if (pass < 12) {
