@@ -71,7 +71,7 @@ static void RABHideView(UIView *view) {
 }
 - (void)didMoveToSuperview {
     %orig;
-    RABHideView(self);
+    RABHideView((UIView *)self);
 }
 - (CGSize)intrinsicContentSize { return CGSizeZero; }
 - (void)setFrame:(CGRect)frame {
