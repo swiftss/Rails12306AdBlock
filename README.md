@@ -1,15 +1,15 @@
 # 12306 Ad Block
 
-## v1.1.5 scoped page rules
+## v1.1.6 scoped page rules
 
 This build does not replace 12306 private Objective-C methods. It injects
-precise rules into confirmed web advertisement containers. The log is written
-inside the app data container at
-`Library/Caches/Rails12306AdBlock.log`.
+precise rules into confirmed web advertisement containers. File and console
+logging have been removed.
 
-The home-page banner is intentionally left unchanged because collapsing it
-caused 12306 to restore an invalid scroll offset after tab switching. The order
-rule targets the statically confirmed `OrderAD` component located
+The home-page banner remains visible at its native size because collapsing it
+caused 12306 to restore an invalid scroll offset after tab switching. Its
+private automatic-scroll timer is disabled, so the initially displayed item
+does not rotate automatically. The order rule targets the statically confirmed `OrderAD` component located
 after `.added-services-contain`, covering runtime builds that no longer expose
 the older advertisement class name.
 

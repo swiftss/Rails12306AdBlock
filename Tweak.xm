@@ -2,33 +2,6 @@
 #import <Foundation/Foundation.h>
 #import <WebKit/WebKit.h>
 
-static NSString *RABLogPath(void) {
-    return [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/Rails12306AdBlock.log"];
-}
-
-static void RABLog(NSString *format, ...) {
-    va_list arguments;
-    va_start(arguments, format);
-    NSString *message = [[NSString alloc] initWithFormat:format arguments:arguments];
-    va_end(arguments);
-    NSString *line = [NSString stringWithFormat:@"%@ %@\n", NSDate.date, message];
-    NSLog(@"[Rails12306AdBlock] %@", message);
-    @synchronized(NSFileHandle.class) {
-        NSData *data = [line dataUsingEncoding:NSUTF8StringEncoding];
-        NSString *path = RABLogPath();
-        NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:path];
-        if (!handle) {
-            [data writeToFile:path atomically:YES];
-        } else {
-            [handle seekToEndOfFile];
-            [handle writeData:data];
-            [handle closeFile];
-        }
-    }
-}
-
-static BOOL RABLoggedLaunchAd = NO;
-
 static BOOL RABHideLaunchContainer(UIView *view) {
     if (!view) return NO;
     BOOL found = NO;
@@ -37,10 +10,6 @@ static BOOL RABHideLaunchContainer(UIView *view) {
         view.alpha = 0;
         view.userInteractionEnabled = NO;
         found = YES;
-        if (!RABLoggedLaunchAd) {
-            RABLoggedLaunchAd = YES;
-            RABLog(@"hidden launch container UIAdBgView frame=%@", NSStringFromCGRect(view.frame));
-        }
     }
     for (UIView *child in view.subviews) {
         if (RABHideLaunchContainer(child)) found = YES;
@@ -55,6 +24,18 @@ static BOOL RABHideLaunchContainer(UIView *view) {
 - (void)addSubview:(UIView *)view {
     %orig;
     RABHideLaunchContainer(view);
+}
+%end
+
+// Keep the native home banner and its layout intact, but prevent its private
+// timer from advancing to the next item. The initially rendered item remains
+// visible and manual UIKit layout/interaction is otherwise untouched.
+%hook MTBookTicketHomeTopADView
+- (void)initAnimationScrollTimerWithDuration:(CGFloat)duration {
+    [self clearADShowTimers];
+}
+
+- (void)startScroll {
 }
 %end
 
@@ -79,12 +60,7 @@ static void RABInstallWebRules(WKWebView *webView) {
          "new MutationObserver(hideAds).observe(root,{childList:true,subtree:true});"
          "return 'installed:'+count;"
         "})()";
-    [webView evaluateJavaScript:script completionHandler:^(id result, NSError *error) {
-        if (!error && [result isKindOfClass:NSString.class] &&
-            [(NSString *)result hasPrefix:@"installed:"]) {
-            RABLog(@"web ad rules %@ url=%@", result, webView.URL.absoluteString ?: @"(no-url)");
-        }
-    }];
+    [webView evaluateJavaScript:script completionHandler:nil];
 }
 
 static void RABProcessView(UIView *view) {
@@ -109,8 +85,6 @@ static void RABRunSafePass(void) {
 
 %ctor {
     @autoreleasepool {
-        RABLog(@"loaded stage=window-launch-hide bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
-            NSProcessInfo.processInfo.processName, NSHomeDirectory());
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)),
             dispatch_get_main_queue(), ^{ RABRunSafePass(); });
     }
