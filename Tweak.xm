@@ -28,6 +28,35 @@ static void RABLog(NSString *format, ...) {
 }
 
 static BOOL RABLoggedHomeAd = NO;
+static CFAbsoluteTime RABDiagnosticDeadline = 0;
+
+static void RABInspectLaunchTree(UIView *view, NSString *path, NSUInteger depth) {
+    if (!view || depth > 25) return;
+    NSString *className = NSStringFromClass(view.class);
+    NSString *currentPath = path.length ? [path stringByAppendingFormat:@"/%@", className] : className;
+    NSString *lowerName = className.lowercaseString;
+    BOOL match = [className isEqualToString:@"UIAdBgView"] ||
+        [lowerName containsString:@"splash"];
+    NSString *text = nil;
+    if ([view isKindOfClass:UILabel.class]) text = ((UILabel *)view).text;
+    if ([view isKindOfClass:UIButton.class]) text = [(UIButton *)view titleForState:UIControlStateNormal];
+    if ([text containsString:@"跳过"] || [text containsString:@"广告"]) match = YES;
+    if (match) {
+        RABLog(@"launch candidate path=%@ frame=%@ text=%@", currentPath,
+            NSStringFromCGRect(view.frame), text ?: @"");
+    }
+    for (UIView *child in view.subviews) RABInspectLaunchTree(child, currentPath, depth + 1);
+}
+
+%hook UIWindow
+- (void)addSubview:(UIView *)view {
+    %orig;
+    if (CFAbsoluteTimeGetCurrent() <= RABDiagnosticDeadline) {
+        RABLog(@"window add root=%@ frame=%@", NSStringFromClass(view.class), NSStringFromCGRect(view.frame));
+        RABInspectLaunchTree(view, @"", 0);
+    }
+}
+%end
 
 static void RABInstallOrderRule(WKWebView *webView) {
     static NSString *script =
@@ -94,7 +123,8 @@ static void RABRunSafePass(void) {
 
 %ctor {
     @autoreleasepool {
-        RABLog(@"loaded stage=home-and-order-no-hooks bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
+        RABDiagnosticDeadline = CFAbsoluteTimeGetCurrent() + 15.0;
+        RABLog(@"loaded stage=launch-window-diagnostic bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
             NSProcessInfo.processInfo.processName, NSHomeDirectory());
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)),
             dispatch_get_main_queue(), ^{ RABRunSafePass(); });
