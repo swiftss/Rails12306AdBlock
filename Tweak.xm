@@ -29,6 +29,7 @@ static void RABLog(NSString *format, ...) {
 
 static BOOL RABLoggedHomeAd = NO;
 static BOOL RABLoggedLaunchAd = NO;
+static BOOL RABNormalizedHomeOffset = NO;
 
 static BOOL RABHideLaunchContainer(UIView *view) {
     if (!view) return NO;
@@ -59,13 +60,13 @@ static BOOL RABHideLaunchContainer(UIView *view) {
 }
 %end
 
-static void RABInstallOrderRule(WKWebView *webView) {
+static void RABInstallWebRules(WKWebView *webView) {
     static NSString *script =
         @"(function(){"
-         "if(window.__rails12306AdBlockV2Installed){return 'present';}"
-         "window.__rails12306AdBlockV2Installed=true;"
-         "function hideOrderAd(){"
-           "var nodes=document.querySelectorAll('.order-recommend-advertisement-wrap,#app>.added-services-contain~*');"
+         "if(window.__rails12306AdBlockV3Installed){return 'present';}"
+         "window.__rails12306AdBlockV3Installed=true;"
+         "function hideAds(){"
+           "var nodes=document.querySelectorAll('.order-recommend-advertisement-wrap,#app>.added-services-contain~*,.top-ad-class,.train-mall');"
            "for(var i=0;i<nodes.length;i++){"
              "nodes[i].style.setProperty('display','none','important');"
              "nodes[i].style.setProperty('height','0','important');"
@@ -75,17 +76,26 @@ static void RABInstallOrderRule(WKWebView *webView) {
            "}"
            "return nodes.length;"
          "}"
-         "var count=hideOrderAd();"
+         "var count=hideAds();"
          "var root=document.documentElement||document;"
-         "new MutationObserver(hideOrderAd).observe(root,{childList:true,subtree:true});"
+         "new MutationObserver(hideAds).observe(root,{childList:true,subtree:true});"
          "return 'installed:'+count;"
         "})()";
     [webView evaluateJavaScript:script completionHandler:^(id result, NSError *error) {
         if (!error && [result isKindOfClass:NSString.class] &&
             [(NSString *)result hasPrefix:@"installed:"]) {
-            RABLog(@"order rule %@ url=%@", result, webView.URL.absoluteString ?: @"(no-url)");
+            RABLog(@"web ad rules %@ url=%@", result, webView.URL.absoluteString ?: @"(no-url)");
         }
     }];
+}
+
+static UITableView *RABAncestorTableView(UIView *view) {
+    UIView *ancestor = view.superview;
+    while (ancestor) {
+        if ([ancestor isKindOfClass:UITableView.class]) return (UITableView *)ancestor;
+        ancestor = ancestor.superview;
+    }
+    return nil;
 }
 
 static void RABProcessView(UIView *view, BOOL insideTopAd) {
@@ -96,12 +106,23 @@ static void RABProcessView(UIView *view, BOOL insideTopAd) {
     // Collapse only the confirmed banner view itself. Never alter its plain UIView
     // wrapper, UITableView, or constraints; doing so removed the ticket-search UI.
     if ([className isEqualToString:@"MTBookTicketHomeTopADView"]) {
+        UITableView *tableView = RABAncestorTableView(view);
         view.hidden = YES;
         view.alpha = 0;
         view.userInteractionEnabled = NO;
         CGRect frame = view.frame;
         frame.size.height = 0;
         view.frame = frame;
+        if (!RABNormalizedHomeOffset && tableView) {
+            RABNormalizedHomeOffset = YES;
+            [tableView layoutIfNeeded];
+            CGFloat top = -tableView.adjustedContentInset.top;
+            CGPoint oldOffset = tableView.contentOffset;
+            if (oldOffset.y > top + 40.0) {
+                [tableView setContentOffset:CGPointMake(oldOffset.x, top) animated:NO];
+                RABLog(@"normalized home offset %.1f -> %.1f", oldOffset.y, top);
+            }
+        }
     }
 
     if (nowInsideTopAd && [className isEqualToString:@"MTBookTicketHomeADView"]) {
@@ -114,7 +135,7 @@ static void RABProcessView(UIView *view, BOOL insideTopAd) {
         }
     }
 
-    if ([view isKindOfClass:WKWebView.class]) RABInstallOrderRule((WKWebView *)view);
+    if ([view isKindOfClass:WKWebView.class]) RABInstallWebRules((WKWebView *)view);
     for (UIView *child in view.subviews) RABProcessView(child, nowInsideTopAd);
 }
 

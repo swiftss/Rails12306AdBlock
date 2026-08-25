@@ -1,8 +1,8 @@
 Package: com.swiftss.rails12306adblock
 Name: 12306 Ad Block
-Version: 1.1.3
+Version: 1.1.4
 Architecture: iphoneos-arm
-Description: Window-level launch ad hiding plus scoped home and order filtering.
+Description: Scoped launch, home, order, and travel-services ad filtering.
 Maintainer: swiftss
 Author: swiftss
 Section: Tweaks
