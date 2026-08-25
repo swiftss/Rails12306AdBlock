@@ -26,10 +26,20 @@ static void RABLog(NSString *format, ...) {
     }
 }
 
+// Stage 0A: test one presentation-layer hook only. Do not alter behavior yet.
+// AdvertisService is deliberately untouched because hooking its startup path
+// caused the app to terminate during launch on Dopamine/iOS 17.
+%hook BonSplashAD
+- (void)addNoCNLaunchView {
+    RABLog(@"BonSplashAD addNoCNLaunchView enter");
+    %orig;
+    RABLog(@"BonSplashAD addNoCNLaunchView returned");
+}
+%end
+
 %ctor {
     @autoreleasepool {
-        // Injection-only baseline: no app-class hooks and no notification observers.
-        RABLog(@"loaded stage=-1-injection-only bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
+        RABLog(@"loaded stage=0A-single-bonsplash-hook bundle=%@ executable=%@ home=%@", NSBundle.mainBundle.bundleIdentifier,
             NSProcessInfo.processInfo.processName, NSHomeDirectory());
     }
 }

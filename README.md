@@ -1,10 +1,10 @@
 # 12306 Ad Block
 
-## v1.0.4 injection-only diagnostic baseline
+## v1.0.5 single-hook diagnostic
 
-This build has no app-class hooks and no notification observers. It only writes
-one line when the tweak is loaded, so it intentionally does not remove ads. The
-log is written inside the app data container at
+This build hooks only `BonSplashAD -addNoCNLaunchView`, calls the complete
+original implementation, and records entry and return. It intentionally does
+not remove ads. The log is written inside the app data container at
 `Library/Caches/Rails12306AdBlock.log`.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:
