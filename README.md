@@ -1,10 +1,11 @@
 # 12306 Ad Block
 
-## v1.0.9 recovery baseline
+## v1.1.0 home and order test
 
-This build does not replace Objective-C methods and does not alter any view.
-It restores the complete home-page layout after the v1.0.8 diagnostic mistake.
-The log is written inside the app data container at
+This build does not replace Objective-C methods. It hides only banner item views
+inside `MTBookTicketHomeTopADView`, without changing the surrounding layout, and
+injects a precise `.order-recommend-advertisement-wrap` rule into order-page web
+views. The log is written inside the app data container at
 `Library/Caches/Rails12306AdBlock.log`.
 
 A focused tweak for Railway 12306 5.9.6 (`cn.12306.rails12306`) that removes:

@@ -1,8 +1,8 @@
 Package: com.swiftss.rails12306adblock
 Name: 12306 Ad Block
-Version: 1.0.9
+Version: 1.1.0
 Architecture: iphoneos-arm
-Description: Recovery build with no app hooks or view mutations.
+Description: Hook-free home banner and order recommendation ad test.
 Maintainer: swiftss
 Author: swiftss
 Section: Tweaks
